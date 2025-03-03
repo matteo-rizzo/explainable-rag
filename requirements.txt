@@ -1,0 +1,10 @@
+tqdm~=4.67.1
+llama-index-core~=0.12.21
+openai~=1.65.1
+networkx~=3.4.2
+pydantic~=2.10.6
+python-dotenv~=1.0.1
+scikit-learn~=1.6.1
+GraKeL~=0.1.10
+rich~=13.9.4
+numpy<2
