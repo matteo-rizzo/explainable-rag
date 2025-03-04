@@ -87,22 +87,22 @@ class ContractFileProcessor:
             except Exception as e:
                 self.logger.error(f"Error loading {file_path}: {e}")
 
-    def group_files(self, mode: str = "aggregated", required_representations: List[str] = None) -> List[
+    def group_files(self, mode: str = "ast_cfg", required_representations: List[str] = None) -> List[
         Tuple[str, List[str], dict, str]]:
         """
         Group JSON files from AST and CFG directories by contract identifier.
         Skips contracts that do not have the required representations.
 
-        :param mode: "aggregated", "ast", or "cfg" to control which data to include.\
+        :param mode: "ast_cfg", "ast", or "cfg" to control which data to include.\
         :param required_representations: List of required representations (e.g., ["ast", "cfg"]).
         :return: A list of tuples (contract_id, source file paths, combined JSON, label).
         """
         required_representations = required_representations or []
 
-        if mode in ["aggregated", "ast"] and self.ast_dir:
+        if mode in ["ast_cfg", "ast"] and self.ast_dir:
             self.process_files_in_dir(self.ast_dir, "ast", "Grouping AST")
 
-        if mode in ["aggregated", "cfg"] and self.cfg_dir:
+        if mode in ["ast_cfg", "cfg"] and self.cfg_dir:
             self.process_files_in_dir(self.cfg_dir, "cfg", "Grouping CFG")
 
         valid_contracts = []
@@ -123,10 +123,10 @@ class ContractFileProcessor:
         Combine AST and/or CFG data from a contract based on the mode.
 
         :param contents: Dictionary containing AST and CFG data.
-        :param mode: The mode in which data should be combined ("aggregated", "ast", "cfg").
+        :param mode: The mode in which data should be combined ("ast_cfg", "ast", "cfg").
         :return: A dictionary containing the selected data.
         """
-        if mode == "aggregated":
+        if mode == "ast_cfg":
             return {k: contents[k] for k in ["ast", "cfg"] if contents[k] is not None}
         return {mode: contents.get(mode)} if contents.get(mode) else {}
 

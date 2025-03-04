@@ -3,11 +3,11 @@ import os
 import time
 
 from llama_index.core import Settings
+from llama_index.llms.openai import OpenAI
 from pydantic import BaseModel, Field
 
 from src.classes.utils.DebugLogger import DebugLogger
 from src.classes.utils.EnvLoader import EnvLoader
-from src.classes.xrag_vector.ModelManager import ModelManager
 
 # Load environment configuration.
 EnvLoader(env_dir="src/config").load_env_files()
@@ -19,7 +19,7 @@ class EvaluationResult(BaseModel):
         ...,
         description="The classification label indicating whether the contract is 'Reentrant' or 'Safe'."
     )
-    justification: str = Field(
+    explanation: str = Field(
         ...,
         description="A detailed explanation for the classification, citing specific lines or functions in the contract as evidence."
     )
@@ -30,7 +30,7 @@ class EvaluationResult(BaseModel):
 
 
 # Initialize the LLM (and set it into Settings, if needed elsewhere).
-llm = ModelManager().get_llm("openai").as_structured_llm(output_cls=EvaluationResult)
+llm = OpenAI(model=os.getenv("OPENAI_MODEL_NAME_CHAT")).as_structured_llm(output_cls=EvaluationResult)
 Settings.llm = llm
 
 logger = DebugLogger()
@@ -43,7 +43,7 @@ You must follow these steps precisely to evaluate the target Solidity contract:
    - Classify the contract as **Reentrant** if it contains patterns or vulnerabilities matching reentrant behavior.
    - Classify the contract as **Safe** if it implements proper safeguards or mitigations that align with non-reentrant examples.
 
-2. **Justify the Classification**:
+2. **Explain the Classification**:
    - Provide a detailed explanation for the classification, citing specific lines or functions in the contract.
    - Support your reasoning with evidence derived solely from the contract content.
 
@@ -67,13 +67,15 @@ def evaluate(path_to_contracts: str) -> None:
 
     # Create a unique log directory.
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    log_dir = os.path.join("log", f"test_{gt_category}_{timestamp}")
+    log_dir = os.path.join("log", f"baseline_{gt_category}_{timestamp}")
     os.makedirs(log_dir, exist_ok=True)
+
+    path_to_ast = path_to_contracts.replace("source", "ast")
 
     # Get sorted list of Solidity files.
     files = sorted(
-        f for f in os.listdir(path_to_contracts)
-        if f.endswith(".sol") and os.path.isfile(os.path.join(path_to_contracts, f))
+        f.replace(".ast.json", ".sol") for f in os.listdir(path_to_ast)
+        if f.endswith(".ast.json") and os.path.isfile(os.path.join(path_to_ast, f))
     )
     total_files = len(files)
 
@@ -85,7 +87,7 @@ def evaluate(path_to_contracts: str) -> None:
     logger.info(f"Results will be logged in: {log_dir}")
 
     correct = 0
-    for index, filename in enumerate(files, start=1):
+    for index, filename in enumerate(files):
         path_to_file = os.path.join(path_to_contracts, filename)
         try:
             with open(path_to_file, 'r', encoding='latin-1') as file:
@@ -130,7 +132,7 @@ def main() -> None:
     """
     Main function to evaluate test datasets for both the 'reentrant' and 'safe' categories.
     """
-    path_to_data_test = os.path.join("dataset", "manually-verified-test")
+    path_to_data_test = os.path.join("dataset", "manually-verified-test", "source")
     path_to_test_reentrant = os.path.join(path_to_data_test, "reentrant")
     path_to_test_safe = os.path.join(path_to_data_test, "safe")
 

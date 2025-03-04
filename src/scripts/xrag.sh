@@ -23,22 +23,32 @@ source "$VENV_PATH/bin/activate"
 export PYTHONPATH=$(pwd)/src:$PYTHONPATH
 
 # Modes to run
-MODES=("aggregated" "ast" "cfg")
+MODES=("ast_cfg" "ast" "cfg")
 
-# Dataset path (modify if needed)
+# OpenAI Model Names (modify these as needed)
+OPENAI_MODELS=("gpt-4o-mini-2024-07-18" "gpt-4o-2024-08-06" "o1-mini-2024-09-12" "o3-mini-2025-01-31")
+
+# Dataset path template
 DATASET_PATH="dataset/manually-verified-{}"
 
-# Loop through modes and execute the Python script
-for MODE in "${MODES[@]}"; do
-    echo "[INFO] Running contract analysis in mode: $MODE..."
+# Loop through each OpenAI model
+for MODEL in "${OPENAI_MODELS[@]}"; do
+    echo "[INFO] Using OpenAI model: $MODEL"
 
-    python3 "$PYTHON_SCRIPT" \
-        --dataset-path "$DATASET_PATH" \
-        --mode "$MODE" \
-        --use-multiprocessing
+    # Loop through each mode
+    for MODE in "${MODES[@]}"; do
+        echo "[INFO] Running contract analysis in mode: $MODE..."
 
-    echo "[INFO] Finished processing mode: $MODE."
-    echo "-------------------------------------------"
+        # Run the Python script with model name argument
+        python3 "$PYTHON_SCRIPT" \
+            --dataset-path "$DATASET_PATH" \
+            --mode "$MODE" \
+            --model-name "$MODEL" \
+            --use-multiprocessing
+
+        echo "[INFO] Finished processing mode: $MODE with model: $MODEL."
+        echo "------------------------------------------------------"
+    done
 done
 
 echo "[INFO] All modes executed successfully!"

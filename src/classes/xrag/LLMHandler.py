@@ -1,3 +1,4 @@
+import os
 import time
 
 from llama_index.llms.openai import OpenAI
@@ -11,9 +12,12 @@ class LLMHandler:
     def __init__(self):
         self.logger = DebugLogger()
 
+        model_name = os.getenv("OPENAI_MODEL_NAME_CHAT")
+        self.logger.debug(f"Initializing LLMHandler with model '{model_name}'...")
+
         # Set up OpenAI instances
-        self.support_llm = OpenAI(temperature=0)
-        self.llm = OpenAI(temperature=0).as_structured_llm(output_cls=EvaluationResult)
+        self.support_llm = OpenAI(model=model_name, temperature=0)
+        self.llm = OpenAI(model=model_name, temperature=0).as_structured_llm(output_cls=EvaluationResult)
 
     def _retry_request(self, func, *args, max_retries=5, initial_wait=2, **kwargs):
         """

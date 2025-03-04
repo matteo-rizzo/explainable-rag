@@ -5,7 +5,7 @@ from src.classes.xrag.CFGProcessor import CFGProcessor
 
 
 class SimilarityCalculator:
-    def __init__(self, similarity_mode: str = "aggregated", weights: Dict[str, float] = None):
+    def __init__(self, similarity_mode: str = "ast_cfg", weights: Dict[str, float] = None):
         self.similarity_mode = similarity_mode.lower()
         self.weights = weights if weights else {"ast": 0.5, "cfg": 0.5}
 
@@ -14,7 +14,7 @@ class SimilarityCalculator:
             return ASTProcessor.compute_similarity(json1, json2)
         elif self.similarity_mode == "cfg":
             return CFGProcessor.compute_similarity(json1, json2)
-        elif self.similarity_mode == "aggregated":
+        elif self.similarity_mode == "ast_cfg":
             return self.aggregated_similarity(json1, json2)
         else:
             raise ValueError(f"Unknown similarity mode: {self.similarity_mode}")

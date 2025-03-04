@@ -7,7 +7,7 @@ from src.classes.xrag.SimilarityCalculator import SimilarityCalculator
 
 
 class Retriever:
-    def __init__(self, documents: List[Any], similarity_mode: str = "aggregated", weights: Dict[str, float] = None):
+    def __init__(self, documents: List[Any], similarity_mode: str = "ast_cfg", weights: Dict[str, float] = None):
         """
         Initializes the Retriever with a list of documents and a similarity calculator.
 
@@ -31,13 +31,13 @@ class Retriever:
         :return: List of top-k most similar documents.
         """
         input_json = input_doc.metadata.get("json", {})
-        if self.similarity_mode != "aggregated":
+        if self.similarity_mode != "ast_cfg":
             input_json = input_json[self.similarity_mode]
 
         scored_docs = []
         for doc in tqdm(self.documents, desc="Retrieving documents"):
             candidate_json = doc.metadata.get("json", {})
-            if self.similarity_mode != "aggregated":
+            if self.similarity_mode != "ast_cfg":
                 candidate_json = candidate_json[self.similarity_mode]
             score = self.similarity_calculator.compute_similarity(input_json, candidate_json)
             scored_docs.append((score, doc))

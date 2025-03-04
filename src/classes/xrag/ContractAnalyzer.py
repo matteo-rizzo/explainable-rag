@@ -13,12 +13,19 @@ from src.functions.xrag import process_input_contract_worker
 
 
 class ContractAnalyzer:
-    def __init__(self, dataset_base: str, mode: str = "aggregated", use_multiprocessing: bool = False) -> None:
+    def __init__(
+            self,
+            dataset_base: str,
+            mode: str = "ast_cfg",
+            model: str = "default",
+            use_multiprocessing: bool = False
+    ) -> None:
         """
         Initializes the ContractAnalyzer class.
 
         :param dataset_base: Base path for the dataset, expects a format placeholder.
-        :param mode: The mode of analysis (e.g., 'aggregated', 'ast', 'cfg').
+        :param mode: The mode of analysis (e.g., 'ast_cfg', 'ast', 'cfg').
+        :param model: The LLM model name.
         :param use_multiprocessing: If True, enables multiprocessing; otherwise, runs sequentially.
         """
         self.mode = mode
@@ -48,7 +55,7 @@ class ContractAnalyzer:
 
         # Create log directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_dir = Path(f"log/contracts_analysis_{self.mode}_{timestamp}")
+        self.log_dir = Path(f"log/xrag_{model}_{self.mode}_{timestamp}")
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.logger.info(f"Log directory created at {self.log_dir}")
 
@@ -145,8 +152,8 @@ class ContractAnalyzer:
             if is_input:
                 # Extract AST and CFG using the processor
                 json_rep = {"json": {
-                    "ast": processor.extract_ast(contract_id, label) if self.mode in ["ast", "aggregated"] else None,
-                    "cfg": processor.extract_cfg(contract_id, label) if self.mode in ["cfg", "aggregated"] else None
+                    "ast": processor.extract_ast(contract_id, label) if self.mode in ["ast", "ast_cfg"] else None,
+                    "cfg": processor.extract_cfg(contract_id, label) if self.mode in ["cfg", "ast_cfg"] else None
                 }}
 
             # Construct Document object with AST and CFG data
