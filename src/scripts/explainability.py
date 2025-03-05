@@ -87,7 +87,7 @@ def evaluate(path_to_contracts: str) -> None:
     logger.info(f"Results will be logged in: {log_dir}")
 
     correct = 0
-    for index, filename in enumerate(files):
+    for index, filename in enumerate(files, start=1):
         path_to_file = os.path.join(path_to_contracts, filename)
         try:
             with open(path_to_file, 'r', encoding='latin-1') as file:

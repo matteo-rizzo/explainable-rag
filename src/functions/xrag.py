@@ -65,7 +65,7 @@ def process_input_contract_worker(args: Tuple) -> Optional[str]:
 
         # Retrieve similar documents
         retriever = Retriever(retriever_docs, similarity_mode=mode)
-        similar_docs = retriever.retrieve(input_doc, k=3)
+        similar_docs = retriever.retrieve(input_doc, k=5)
 
         # Initialize LLM handler
         llm_processor = LLMHandler()

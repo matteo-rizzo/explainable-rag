@@ -26,7 +26,8 @@ export PYTHONPATH=$(pwd)/src:$PYTHONPATH
 MODES=("ast_cfg" "ast" "cfg")
 
 # OpenAI Model Names (modify these as needed)
-OPENAI_MODELS=("gpt-4o-mini-2024-07-18" "gpt-4o-2024-08-06" "o1-mini-2024-09-12" "o3-mini-2025-01-31")
+#OPENAI_MODELS=("gpt-3.5-turbo-0125" "gpt-4o-mini-2024-07-18" "gpt-4o-2024-08-06" "o3-mini-2025-01-31")
+OPENAI_MODELS=("o3-mini-2025-01-31")
 
 # Dataset path template
 DATASET_PATH="dataset/manually-verified-{}"
