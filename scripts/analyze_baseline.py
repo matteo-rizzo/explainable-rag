@@ -36,7 +36,7 @@ def load_classification_results(base_path):
                 try:
                     with open(contract_path, 'r') as f:
                         data = json.load(f)
-                        contract_id = contract_file.replace(".json", "")
+                        contract_id = contract_file.replace(".sol.json", "")
                         predicted_label = data.get("classification").lower()
 
                         # If model prediction does not match the ground truth, log the contract ID

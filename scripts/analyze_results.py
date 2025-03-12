@@ -1,100 +1,102 @@
 import json
-import os
 from collections import defaultdict
 
-def load_classification_results(base_path):
-    """
-    Load classification results from the directory structure:
-    baseline > model_name > data_type (ast/cfg/ast_cfg) > groundtruth_folder (reentrant/safe) > contract_id_folder > classification.json
-    """
-    misclassified = defaultdict(lambda: {
-        "total": 0,
-        "reentrant": 0,
-        "safe": 0,
-        "misclassified_reentrant": 0,
-        "misclassified_safe": 0,
-        "misclassified_by_data_type": defaultdict(lambda: {"reentrant": {"misclassified": 0, "total": 0}, "safe": {"misclassified": 0, "total": 0}}),
-        "misclassified_contracts": []
-    })
 
-    for model in os.listdir(base_path):
-        model_path = os.path.join(base_path, model)
-        if not os.path.isdir(model_path):
-            continue
+def load_misclassified_data(file_path):
+    """ Load misclassified contracts from a JSON file. """
+    print(f"Loading misclassified data from {file_path}...")
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    print(f"Loaded {len(data)} models from {file_path}.")
+    return data
 
-        for data_type in os.listdir(model_path):
-            data_type_path = os.path.join(model_path, data_type)
-            if not os.path.isdir(data_type_path):
-                continue
 
-            for groundtruth in ['reentrant', 'safe']:
-                groundtruth_path = os.path.join(data_type_path, groundtruth)
-                if not os.path.isdir(groundtruth_path):
-                    continue
+def compute_union_intersection(baseline_data, comparison_data):
+    """ Compute the union and intersection of misclassified contracts, broken down by reentrant, safe, and data type. """
+    print("Computing union and intersection of misclassified contracts...")
+    results = {}
 
-                for contract_id in os.listdir(groundtruth_path):
-                    contract_id_path = os.path.join(groundtruth_path, contract_id)
-                    classification_file = os.path.join(contract_id_path, "classification.json")
+    for model in baseline_data.keys() | comparison_data.keys():
+        print(f"Processing model: {model}")
+        results[model] = {
+            "union": defaultdict(lambda: {"reentrant": set(), "safe": set()}),
+            "intersection": defaultdict(lambda: {"reentrant": set(), "safe": set()}),
+            "improvement": defaultdict(lambda: {"reentrant": 0, "safe": 0})
+        }
 
-                    if not os.path.isfile(classification_file):
-                        continue
+        baseline_reentrant = set(
+            contract["contract_id"] for contract in baseline_data.get(model, {}).get("misclassified_contracts", [])
+            if contract["groundtruth"] == "reentrant"
+        )
+        baseline_safe = set(
+            contract["contract_id"] for contract in baseline_data.get(model, {}).get("misclassified_contracts", [])
+            if contract["groundtruth"] == "safe"
+        )
 
-                    try:
-                        with open(classification_file, 'r') as f:
-                            data = json.load(f)
-                            predicted_label = data.get("classification", "").lower()
+        for data_type in {d["data_type"] for d in comparison_data.get(model, {}).get("misclassified_contracts", [])}:
+            print(f"  Processing data type: {data_type}")
+            comparison_reentrant = set(
+                contract["contract_id"] for contract in
+                comparison_data.get(model, {}).get("misclassified_contracts", [])
+                if contract["groundtruth"] == "reentrant" and contract["data_type"] == data_type
+            )
+            comparison_safe = set(
+                contract["contract_id"] for contract in
+                comparison_data.get(model, {}).get("misclassified_contracts", [])
+                if contract["groundtruth"] == "safe" and contract["data_type"] == data_type
+            )
 
-                            misclassified[model][groundtruth] += 1
-                            misclassified[model]["total"] += 1
-                            misclassified[model]["misclassified_by_data_type"][data_type][groundtruth]["total"] += 1
+            results[model]["union"][data_type]["reentrant"] = list(baseline_reentrant | comparison_reentrant)
+            results[model]["union"][data_type]["safe"] = list(baseline_safe | comparison_safe)
+            results[model]["intersection"][data_type]["reentrant"] = list(baseline_reentrant & comparison_reentrant)
+            results[model]["intersection"][data_type]["safe"] = list(baseline_safe & comparison_safe)
 
-                            if predicted_label != groundtruth:
-                                if groundtruth == "reentrant":
-                                    misclassified[model]["misclassified_reentrant"] += 1
-                                else:
-                                    misclassified[model]["misclassified_safe"] += 1
-                                misclassified[model]["misclassified_by_data_type"][data_type][groundtruth]["misclassified"] += 1
-                                misclassified[model]["misclassified_contracts"].append({
-                                    "contract_id": contract_id,
-                                    "groundtruth": groundtruth,
-                                    "predicted": predicted_label,
-                                    "data_type": data_type
-                                })
-                    except Exception as e:
-                        print(f"Error processing {classification_file}: {e}")
+            # Compute improvement
+            baseline_reentrant_count = len(baseline_reentrant)
+            comparison_reentrant_count = len(comparison_reentrant)
+            results[model]["improvement"][data_type][
+                "reentrant"] = baseline_reentrant_count - comparison_reentrant_count
 
-    return misclassified
+            baseline_safe_count = len(baseline_safe)
+            comparison_safe_count = len(comparison_safe)
+            results[model]["improvement"][data_type]["safe"] = baseline_safe_count - comparison_safe_count
 
-def save_misclassified_results(misclassified, output_file):
-    """
-    Save misclassified results to a JSON file.
-    """
-    with open(output_file, 'w') as f:
-        json.dump(misclassified, f, indent=4)
-    print(f"Misclassified contract IDs saved to {output_file}")
+    print("Completed computation of union, intersection, and improvement.")
+    return results
 
-def print_misclassification_stats(misclassified):
-    """
-    Print misclassification statistics for each model.
-    """
-    print("\nMisclassification Statistics:")
-    for model, stats in misclassified.items():
+
+def print_stats(results):
+    """ Print statistics about the union and intersection of misclassified contracts broken down by data type. """
+    print("\nMisclassification Union, Intersection, and Improvement Statistics:")
+    for model, stats in results.items():
         print(f"Model: {model}")
-        print(f"  Total Contracts: {stats['total']}")
-        print(f"  Reentrant: {stats['reentrant']}, Safe: {stats['safe']}")
-        print(
-            f"  Misclassified Reentrant: {stats['misclassified_reentrant']}, Misclassified Safe: {stats['misclassified_safe']}")
-        print(f"  Misclassified Contracts: {len(stats['misclassified_contracts'])}")
-        print("  Misclassification by Data Type and Groundtruth:")
-        for data_type, groundtruth_stats in stats["misclassified_by_data_type"].items():
-            print(f"    Data Type: {data_type}")
-            for groundtruth, counts in groundtruth_stats.items():
-                print(f"      {groundtruth}: {counts['misclassified']} misclassified out of {counts['total']}")
+        for data_type, data in stats["union"].items():
+            print(f"  Data Type: {data_type}")
+            print(f"    Union Reentrant: {len(data['reentrant'])}, Union Safe: {len(data['safe'])}")
+            print(
+                f"    Intersection Reentrant: {len(stats['intersection'][data_type]['reentrant'])}, Intersection Safe: {len(stats['intersection'][data_type]['safe'])}")
+            print(
+                f"    Improvement Reentrant: {stats['improvement'][data_type]['reentrant']}, Improvement Safe: {stats['improvement'][data_type]['safe']}")
+
+
+def save_results(results, output_file):
+    """ Save the computed union, intersection, and improvement data to a JSON file. """
+    print(f"Saving results to {output_file}...")
+    with open(output_file, 'w') as f:
+        json.dump(results, f, indent=4)
+    print(f"Results successfully saved to {output_file}.")
+
 
 if __name__ == "__main__":
-    BASE_DIR = "explanations/models_comparison"  # Update this with the actual path
-    OUTPUT_FILE = "misclassified_contracts_comparison.json"
+    BASELINE_FILE = "misclassified_contracts_baseline.json"
+    COMPARISON_FILE = "misclassified_contracts_xrag.json"
+    OUTPUT_FILE = "misclassified_contracts_union_intersection.json"
 
-    misclassified_results = load_classification_results(BASE_DIR)
-    save_misclassified_results(misclassified_results, OUTPUT_FILE)
-    print_misclassification_stats(misclassified_results)
+    print("Starting misclassification analysis...")
+    baseline_data = load_misclassified_data(BASELINE_FILE)
+    comparison_data = load_misclassified_data(COMPARISON_FILE)
+
+    union_intersection_results = compute_union_intersection(baseline_data, comparison_data)
+    save_results(union_intersection_results, OUTPUT_FILE)
+    print_stats(union_intersection_results)
+    print("Analysis complete.")
