@@ -173,3 +173,5 @@ cython_debug/
 /results/
 /misclassification_analysis/
 /notebooks/misclassified/
+/notebooks/questionnaire/
+/notebooks/logs/
