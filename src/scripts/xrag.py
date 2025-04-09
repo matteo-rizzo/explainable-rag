@@ -10,52 +10,11 @@ from src.classes.xrag.ContractAnalyzer import ContractAnalyzer
 EnvLoader(env_dir="src/config").load_env_files()
 
 
-def parse_args():
-    """
-    Parses command-line arguments.
-
-    :return: Parsed arguments.
-    """
-    parser = argparse.ArgumentParser(
-        description="Contract Analysis CLI for analyzing manually verified contracts."
-    )
-
-    parser.add_argument(
-        "--dataset-path",
-        type=str,
-        default="dataset/manually-verified-{}",
-        help="Base path for the dataset, with '{}' as a placeholder for dataset type.",
-    )
-
-    parser.add_argument(
-        "--mode",
-        type=str,
-        choices=["ast_cfg", "ast", "cfg"],
-        default="ast_cfg",
-        help="Mode of analysis. Options: 'ast_cfg', 'ast', 'cfg'. Default: 'cfg'.",
-    )
-
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        help="OpenAI model name for processing. Example: 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'. Defaults to openai.env",
-    )
-
-    parser.add_argument(
-        "--use-multiprocessing",
-        action="store_true",
-        help="Enable multiprocessing for contract analysis.",
-    )
-
-    return parser.parse_args()
-
-
-def main():
+def main(args):
     """
     Main script to initialize and run the ContractAnalyzer.
     """
     logger = DebugLogger()
-    args = parse_args()
 
     try:
         # Set OpenAI model name as an environment variable
@@ -80,4 +39,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Contract Analysis CLI for analyzing manually verified contracts.")
+    parser.add_argument("--dataset-path", type=str, default="dataset/manually-verified-{}",
+                        help="Base path for the dataset, with '{}' as a placeholder for dataset type.")
+    parser.add_argument("--mode", type=str, choices=["ast_cfg", "ast", "cfg"], default="ast_cfg",
+                        help="Mode of analysis. Options: 'ast_cfg', 'ast', 'cfg'. Default: 'cfg'.")
+    parser.add_argument("--model-name", type=str, choices=['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o3-mini'],
+                        default="gpt-3.5-turbo", help="OpenAI model name. Options: 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o3-mini'")
+    parser.add_argument("--use-multiprocessing", action="store_true",
+                        help="Enable multiprocessing for contract analysis.")
+    args = parser.parse_args()
+    main(args)

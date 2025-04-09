@@ -39,8 +39,7 @@ class ContractFileProcessor:
         if not directory:
             return None
 
-        file_ext = ".ast.json" if data_type == "AST" else "-combined.json"
-        file_path = os.path.join(directory, label, contract_id + file_ext)
+        file_path = os.path.join(directory, label, f"{contract_id}.json")
         try:
             with open(file_path, "r") as f:
                 return json.load(f)

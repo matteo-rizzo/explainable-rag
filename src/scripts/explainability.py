@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import time
@@ -23,15 +24,7 @@ class EvaluationResult(BaseModel):
         ...,
         description="A detailed explanation for the classification, citing specific lines or functions in the contract as evidence."
     )
-    analysis: str = Field(
-        ...,
-        description="Key observations about the contract, including specific functions, external calls, and state update sequences."
-    )
 
-
-# Initialize the LLM (and set it into Settings, if needed elsewhere).
-llm = OpenAI(model=os.getenv("OPENAI_MODEL_NAME_CHAT")).as_structured_llm(output_cls=EvaluationResult)
-Settings.llm = llm
 
 logger = DebugLogger()
 
@@ -45,7 +38,7 @@ You must follow these steps precisely to evaluate the target Solidity contract:
 
 2. **Explain the Classification**:
    - Provide a detailed explanation for the classification, citing specific lines or functions in the contract.
-   - Support your reasoning with evidence derived solely from the contract content.
+   - Support your reasoning with evidence derived from the contract content.
 
 ### Input Contract:
 """
@@ -70,13 +63,8 @@ def evaluate(path_to_contracts: str) -> None:
     log_dir = os.path.join("log", f"baseline_{gt_category}_{timestamp}")
     os.makedirs(log_dir, exist_ok=True)
 
-    path_to_ast = path_to_contracts.replace("source", "ast")
-
     # Get sorted list of Solidity files.
-    files = sorted(
-        f.replace(".ast.json", ".sol") for f in os.listdir(path_to_ast)
-        if f.endswith(".ast.json") and os.path.isfile(os.path.join(path_to_ast, f))
-    )
+    files = sorted(os.listdir(path_to_contracts))
     total_files = len(files)
 
     if total_files == 0:
@@ -128,17 +116,26 @@ def evaluate(path_to_contracts: str) -> None:
     logger.debug(f"Processed {total_files} files. Final Accuracy: {accuracy:.2%}")
 
 
-def main() -> None:
+def main(args) -> None:
     """
     Main function to evaluate test datasets for both the 'reentrant' and 'safe' categories.
     """
-    path_to_data_test = os.path.join("dataset", "manually-verified-test", "source")
-    path_to_test_reentrant = os.path.join(path_to_data_test, "reentrant")
-    path_to_test_safe = os.path.join(path_to_data_test, "safe")
+    path_to_reentrant = os.path.join(args.dataset_path, "reentrant")
+    path_to_safe = os.path.join(args.dataset_path, "safe")
 
-    evaluate(path_to_test_reentrant)
-    evaluate(path_to_test_safe)
+    # Initialize the LLM (and set it into Settings, if needed elsewhere).
+    llm = OpenAI(model=args.model_name).as_structured_llm(output_cls=EvaluationResult)
+    Settings.llm = llm
+
+    evaluate(path_to_reentrant)
+    evaluate(path_to_safe)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Contract Analysis CLI for analyzing manually verified contracts.")
+    parser.add_argument("--dataset-path", type=str, default="dataset/manually-verified",
+                        help="Base path for the dataset.")
+    parser.add_argument("--model-name", type=str, required=True,
+                        help="OpenAI model name for processing. Example: 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo")
+    args = parser.parse_args()
+    main(args)
