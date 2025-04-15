@@ -7,7 +7,7 @@ from src.classes.utils.EnvLoader import EnvLoader
 from src.classes.xrag.ContractAnalyzer import ContractAnalyzer
 
 # Load environment variables
-EnvLoader(env_dir="src/config").load_env_files()
+EnvLoader(env_dir="src").load_env_files()
 
 
 def main(args):
@@ -17,8 +17,8 @@ def main(args):
     logger = DebugLogger()
 
     try:
-        # Set OpenAI model name as an environment variable
-        os.environ["OPENAI_MODEL_NAME_CHAT"] = args.model_name
+        # Set model name as an environment variable
+        os.environ["MODEL_NAME"] = args.model_name
 
         # Initialize ContractAnalyzer with user-defined arguments
         analyzer = ContractAnalyzer(
@@ -44,8 +44,8 @@ if __name__ == "__main__":
                         help="Base path for the dataset, with '{}' as a placeholder for dataset type.")
     parser.add_argument("--mode", type=str, choices=["ast_cfg", "ast", "cfg"], default="ast_cfg",
                         help="Mode of analysis. Options: 'ast_cfg', 'ast', 'cfg'. Default: 'cfg'.")
-    parser.add_argument("--model-name", type=str, choices=['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o3-mini'],
-                        default="gpt-3.5-turbo", help="OpenAI model name. Options: 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o3-mini'")
+    parser.add_argument("--model-name", type=str, help="OpenAI or Google model name.",
+                        choices=['gpt-4o', 'o3-mini', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'])
     parser.add_argument("--use-multiprocessing", action="store_true",
                         help="Enable multiprocessing for contract analysis.")
     args = parser.parse_args()

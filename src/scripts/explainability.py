@@ -3,53 +3,19 @@ import json
 import os
 import time
 
-from llama_index.core import Settings
-from llama_index.llms.openai import OpenAI
-from pydantic import BaseModel, Field
-
 from src.classes.utils.DebugLogger import DebugLogger
 from src.classes.utils.EnvLoader import EnvLoader
+from src.classes.xrag.LLMHandler import LLMHandler
 
 # Load environment configuration.
-EnvLoader(env_dir="src/config").load_env_files()
-
-
-# Define a Pydantic model to enforce the structured output format.
-class EvaluationResult(BaseModel):
-    classification: str = Field(
-        ...,
-        description="The classification label indicating whether the contract is 'Reentrant' or 'Safe'."
-    )
-    explanation: str = Field(
-        ...,
-        description="A detailed explanation for the classification, citing specific lines or functions in the contract as evidence."
-    )
-
+EnvLoader(env_dir="src").load_env_files()
 
 logger = DebugLogger()
 
-# Updated prompt instructing the LLM on the required structured output.
-EVAL_PROMPT = """
-You must follow these steps precisely to evaluate the target Solidity contract:
 
-1. **Classify the Contract**:
-   - Classify the contract as **Reentrant** if it contains patterns or vulnerabilities matching reentrant behavior.
-   - Classify the contract as **Safe** if it implements proper safeguards or mitigations that align with non-reentrant examples.
-
-2. **Explain the Classification**:
-   - Provide a detailed explanation for the classification, citing specific lines or functions in the contract.
-   - Support your reasoning with evidence derived from the contract content.
-
-### Input Contract:
-"""
-
-
-def evaluate(path_to_contracts: str) -> None:
+def evaluate(path_to_contracts: str, model_name: str = None) -> None:
     """
     Evaluates Solidity contracts in the given directory by having the LLM classify and explain each contract.
-
-    Parameters:
-        path_to_contracts (str): Path to a directory containing Solidity (.sol) contract files.
     """
     if not os.path.isdir(path_to_contracts):
         logger.error(f"Directory not found: {path_to_contracts}")
@@ -60,7 +26,7 @@ def evaluate(path_to_contracts: str) -> None:
 
     # Create a unique log directory.
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    log_dir = os.path.join("log", f"baseline_{gt_category}_{timestamp}")
+    log_dir = os.path.join("logs", "baseline", f"{model_name}/{gt_category}_{timestamp}")
     os.makedirs(log_dir, exist_ok=True)
 
     # Get sorted list of Solidity files.
@@ -71,8 +37,10 @@ def evaluate(path_to_contracts: str) -> None:
         logger.warning(f"No Solidity (.sol) files found in {path_to_contracts}.")
         return
 
-    logger.info(f"Testing LLM on {total_files} files from category: {gt_category}")
-    logger.info(f"Results will be logged in: {log_dir}")
+    logger.info(f"Testing {model_name} on {total_files} files from category: {gt_category}")
+    logger.info(f"Results will be logged at: {log_dir}")
+
+    llm = LLMHandler()
 
     correct = 0
     for index, filename in enumerate(files, start=1):
@@ -86,18 +54,15 @@ def evaluate(path_to_contracts: str) -> None:
 
         logger.debug(f"[{index}/{total_files}] Processing file: {filename}")
 
-        # Combine the evaluation prompt with the contract content.
-        prompt = EVAL_PROMPT + contract_content
-
         try:
             # Ask the LLM to classify and explain.
-            answer = json.loads(llm.complete(prompt).text)
+            answer = json.loads(llm.analyze_contract(contract_content).text)
         except Exception as e:
             logger.error(f"Error generating completion for file {filename}: {e}")
             continue
 
         # Write the structured output (as JSON) to a file in the log directory.
-        output_path = os.path.join(log_dir, f"{filename}.json")
+        output_path = os.path.join(log_dir, f"{filename.split('.')[0]}.json")
         try:
             with open(output_path, 'w', encoding='utf-8') as output_file:
                 json.dump(answer, output_file, indent=4, ensure_ascii=True)
@@ -112,7 +77,7 @@ def evaluate(path_to_contracts: str) -> None:
         logger.info(f"Processed {index}/{total_files} files. Running accuracy: {running_accuracy:.2%}")
 
     accuracy = correct / total_files
-    logger.info(f"Final classification accuracy for '{gt_category}': {accuracy:.2%}")
+    logger.info(f"Final classification accuracy for {model_name} - '{gt_category}': {accuracy:.2%}")
     logger.debug(f"Processed {total_files} files. Final Accuracy: {accuracy:.2%}")
 
 
@@ -120,22 +85,20 @@ def main(args) -> None:
     """
     Main function to evaluate test datasets for both the 'reentrant' and 'safe' categories.
     """
-    path_to_reentrant = os.path.join(args.dataset_path, "reentrant")
-    path_to_safe = os.path.join(args.dataset_path, "safe")
+    path_to_reentrant = os.path.join(args.dataset_path, "source", "reentrant")
+    path_to_safe = os.path.join(args.dataset_path, "source", "safe")
 
-    # Initialize the LLM (and set it into Settings, if needed elsewhere).
-    llm = OpenAI(model=args.model_name).as_structured_llm(output_cls=EvaluationResult)
-    Settings.llm = llm
+    os.environ["MODEL_NAME"] = args.model_name
 
-    evaluate(path_to_reentrant)
-    evaluate(path_to_safe)
+    evaluate(path_to_reentrant, args.model_name)
+    evaluate(path_to_safe, args.model_name)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Contract Analysis CLI for analyzing manually verified contracts.")
     parser.add_argument("--dataset-path", type=str, default="dataset/manually-verified",
                         help="Base path for the dataset.")
-    parser.add_argument("--model-name", type=str, required=True,
-                        help="OpenAI model name for processing. Example: 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo")
+    parser.add_argument("--model-name", type=str, required=True, help="OpenAI or Google model name.",
+                        choices=['gpt-4o', 'o3-mini', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'])
     args = parser.parse_args()
     main(args)
