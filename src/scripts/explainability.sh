@@ -23,14 +23,14 @@ source "$VENV_PATH/bin/activate"
 export PYTHONPATH=$(pwd)/src:$PYTHONPATH
 
 # OpenAI Model Names (modify these as needed)
-MODELS=("gemini-2.0-flash-lite" "gemini-1.5-flash")
+MODELS=("gpt-4o" "o3-mini"  "gemini-2.0-flash-lite" "gemini-1.5-flash")
 
 # Dataset path template
-DATASET_PATH="dataset/gt_reentrant"
+DATASET_PATH="dataset"
 
 # Loop through each OpenAI model
 for MODEL in "${MODELS[@]}"; do
-    echo "[INFO] Using OpenAI model: $MODEL"
+    echo "[INFO] Using model: $MODEL"
 
     # Run the Python script with model name argument
     python3 "$PYTHON_SCRIPT" \
