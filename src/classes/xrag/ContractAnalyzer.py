@@ -55,7 +55,7 @@ class ContractAnalyzer:
 
         # Create log directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_dir = Path(f"log/xrag_{model}_{self.mode}_{timestamp}")
+        self.log_dir = Path(f"logs/xrag/{model}/{self.mode}_{timestamp}")
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.logger.info(f"Log directory created at {self.log_dir}")
 

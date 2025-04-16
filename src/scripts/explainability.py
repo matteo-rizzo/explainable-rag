@@ -2,36 +2,115 @@ import argparse
 import json
 import os
 import time
+from pathlib import Path
 
 from src.classes.utils.DebugLogger import DebugLogger
 from src.classes.utils.EnvLoader import EnvLoader
 from src.classes.xrag.LLMHandler import LLMHandler
+from src.functions.utils import get_missing_files
 
 # Load environment configuration.
-EnvLoader(env_dir="src").load_env_files()
+try:
+    EnvLoader(env_dir="src").load_env_files()
+except Exception as e:
+    print(f"Error loading environment configuration: {e}")
+    exit(1)
 
 logger = DebugLogger()
+LOGS_BASE_DIR = Path("logs", "baseline")
 
 
-def evaluate(path_to_contracts: str, model_name: str = None) -> None:
+def load_and_filter_contracts(path_to_contracts: Path, files_to_process: list[str] = None) -> list[Path]:
     """
-    Evaluates Solidity contracts in the given directory by having the LLM classify and explain each contract.
+    Loads and filters Solidity contract file paths with better error handling.
     """
-    if not os.path.isdir(path_to_contracts):
+    if not path_to_contracts.is_dir():
+        logger.error(f"Directory not found: {path_to_contracts}")
+        return []
+    try:
+        if files_to_process is None:
+            files = [f for f in path_to_contracts.iterdir() if f.is_file() and f.name.endswith(".sol")]
+        else:
+            files = []
+            for filename in files_to_process:
+                filepath = path_to_contracts / filename
+                if filepath.is_file() and filename.endswith(".sol"):
+                    files.append(filepath)
+                elif not filepath.is_file():
+                    logger.warning(f"File not found: {filepath}")
+                elif not filename.endswith(".sol"):
+                    logger.warning(f"Skipping non-Solidity file: {filepath}")
+        return sorted(files)
+    except OSError as e:
+        logger.error(f"Error accessing directory {path_to_contracts}: {e}")
+        return []
+
+
+def process_contract(path_to_file: Path, gt_category: str, llm: LLMHandler, log_dir: Path) -> bool:
+    """
+    Processes a single contract file with improved error handling.
+    Returns True if classification is correct, False otherwise.
+    """
+    filename = path_to_file.name
+    try:
+        contract_content = path_to_file.read_text(encoding='latin-1')
+    except UnicodeDecodeError as e:
+        logger.error(f"Error decoding file {path_to_file} with latin-1: {e}. Trying utf-8.")
+        try:
+            contract_content = path_to_file.read_text(encoding='utf-8')
+        except Exception as e:
+            logger.error(f"Error reading file {path_to_file}: {e}")
+            return False
+    except Exception as e:
+        logger.error(f"Error reading file {path_to_file}: {e}")
+        return False
+
+    logger.debug(f"Processing file: {filename}")
+
+    try:
+        llm_response = llm.analyze_contract(contract_content)
+        if llm_response:
+            answer = json.loads(llm_response)
+        else:
+            logger.error(f"Empty LLM response for file {filename}: {llm_response}")
+            return False
+    except json.JSONDecodeError as e:
+        logger.error(f"Error decoding JSON response for file {filename}: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Error generating completion for file {filename}: {e}")
+        return False
+
+    output_path = log_dir / f"{filename.split('.')[0]}.json"
+    try:
+        output_path.write_text(json.dumps(answer, indent=4, ensure_ascii=True), encoding='utf-8')
+    except OSError as e:
+        logger.error(f"Error writing output file {output_path}: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error writing output file {output_path}: {e}")
+
+    return answer.get("classification", "").strip().lower() == gt_category.lower()
+
+
+def evaluate(path_to_contracts: Path, model_name: str = None, files_to_process: list[str] = None) -> None:
+    """
+    Evaluates Solidity contracts in the given directory with better error handling.
+    """
+    if not path_to_contracts.is_dir():
         logger.error(f"Directory not found: {path_to_contracts}")
         return
 
-    # Use the directory name as the ground truth category (e.g., "reentrant" or "safe").
-    gt_category = os.path.basename(os.path.normpath(path_to_contracts))
-
-    # Create a unique log directory.
+    gt_category = path_to_contracts.name
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    log_dir = os.path.join("logs", "baseline", f"{model_name}/{gt_category}_{timestamp}")
-    os.makedirs(log_dir, exist_ok=True)
+    log_dir = LOGS_BASE_DIR / model_name / f"{gt_category}_{timestamp}"
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.error(f"Error creating log directory {log_dir}: {e}")
+        return
 
-    # Get sorted list of Solidity files.
-    files = sorted(os.listdir(path_to_contracts))
-    total_files = len(files)
+    solidity_files = load_and_filter_contracts(path_to_contracts, files_to_process)
+    total_files = len(solidity_files)
 
     if total_files == 0:
         logger.warning(f"No Solidity (.sol) files found in {path_to_contracts}.")
@@ -41,57 +120,48 @@ def evaluate(path_to_contracts: str, model_name: str = None) -> None:
     logger.info(f"Results will be logged at: {log_dir}")
 
     llm = LLMHandler()
-
     correct = 0
-    for index, filename in enumerate(files, start=1):
-        path_to_file = os.path.join(path_to_contracts, filename)
-        try:
-            with open(path_to_file, 'r', encoding='latin-1') as file:
-                contract_content = file.read()
-        except Exception as e:
-            logger.error(f"Error reading file {path_to_file}: {e}")
-            continue
-
-        logger.debug(f"[{index}/{total_files}] Processing file: {filename}")
-
-        try:
-            # Ask the LLM to classify and explain.
-            answer = json.loads(llm.analyze_contract(contract_content).text)
-        except Exception as e:
-            logger.error(f"Error generating completion for file {filename}: {e}")
-            continue
-
-        # Write the structured output (as JSON) to a file in the log directory.
-        output_path = os.path.join(log_dir, f"{filename.split('.')[0]}.json")
-        try:
-            with open(output_path, 'w', encoding='utf-8') as output_file:
-                json.dump(answer, output_file, indent=4, ensure_ascii=True)
-        except Exception as e:
-            logger.error(f"Error writing output file {output_path}: {e}")
-
-        # Check classification accuracy (using case-insensitive comparison).
-        if answer["classification"].strip().lower() == gt_category.lower():
+    for index, path_to_file in enumerate(solidity_files, start=1):
+        if process_contract(path_to_file, gt_category, llm, log_dir):
             correct += 1
-
         running_accuracy = correct / index
         logger.info(f"Processed {index}/{total_files} files. Running accuracy: {running_accuracy:.2%}")
 
-    accuracy = correct / total_files
-    logger.info(f"Final classification accuracy for {model_name} - '{gt_category}': {accuracy:.2%}")
-    logger.debug(f"Processed {total_files} files. Final Accuracy: {accuracy:.2%}")
+    if total_files > 0:
+        accuracy = correct / total_files
+        logger.info(f"Final classification accuracy for {model_name} - '{gt_category}': {accuracy:.2%}")
+        logger.debug(f"Processed {total_files} files. Final Accuracy: {accuracy:.2%}")
+    else:
+        logger.warning(f"No files were processed for category '{gt_category}'.")
 
 
 def main(args) -> None:
     """
-    Main function to evaluate test datasets for both the 'reentrant' and 'safe' categories.
+    Main function to evaluate test datasets with improved error handling.
     """
-    path_to_reentrant = os.path.join(args.dataset_path, "source", "reentrant")
-    path_to_safe = os.path.join(args.dataset_path, "source", "safe")
+    dataset_path = Path(args.dataset_path)
+    path_to_reentrant = dataset_path / "source" / "reentrant"
+    path_to_safe = dataset_path / "source" / "safe"
+
+    all_reentrant_files = [f.name for f in path_to_reentrant.iterdir() if f.is_file() and f.name.endswith(".sol")]
+    all_safe_files = [f.name for f in path_to_safe.iterdir() if f.is_file() and f.name.endswith(".sol")]
+    missing_reentrant_files = all_reentrant_files
+    missing_safe_files = all_safe_files
+
+    if args.missing_files_dir:
+        missing_files_path = Path(args.missing_files_dir)
+        try:
+            missing_reentrant_files = get_missing_files(str(missing_files_path), all_reentrant_files)
+            missing_safe_files = get_missing_files(str(missing_files_path), all_safe_files)
+        except OSError as e:
+            logger.error(f"Error accessing missing files directory {missing_files_path}: {e}")
+            missing_reentrant_files = []
+            missing_safe_files = []
 
     os.environ["MODEL_NAME"] = args.model_name
 
-    evaluate(path_to_reentrant, args.model_name)
-    evaluate(path_to_safe, args.model_name)
+    evaluate(path_to_reentrant, args.model_name, missing_reentrant_files)
+    evaluate(path_to_safe, args.model_name, missing_safe_files)
 
 
 if __name__ == "__main__":
@@ -100,5 +170,7 @@ if __name__ == "__main__":
                         help="Base path for the dataset.")
     parser.add_argument("--model-name", type=str, required=True, help="OpenAI or Google model name.",
                         choices=['gpt-4o', 'o3-mini', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'])
+    parser.add_argument("--missing-files-dir", type=str, default="",
+                        help="Path to a directory to check missing files against")
     args = parser.parse_args()
     main(args)
