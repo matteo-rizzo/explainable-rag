@@ -26,10 +26,10 @@ export PYTHONPATH=$(pwd)/src:$PYTHONPATH
 MODES=("ast_cfg" "ast" "cfg")
 
 # OpenAI Model Names (modify these as needed)
-MODELS=("gemini-1.5-flash")
+MODELS=("gpt-4o" "o3-mini")
 
 # Dataset path template
-DATASET_PATH="dataset/manually-verified-{}"
+DATASET_PATH="cv_splits/cv_split_1/{}"
 
 # Loop through each OpenAI model
 for MODEL in "${MODELS[@]}"; do

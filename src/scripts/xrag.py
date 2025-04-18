@@ -40,7 +40,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Contract Analysis CLI for analyzing manually verified contracts.")
-    parser.add_argument("--dataset-path", type=str, default="dataset/manually-verified-{}",
+    parser.add_argument("--dataset-path", type=str, default="dataset/manually-verified",
                         help="Base path for the dataset, with '{}' as a placeholder for dataset type.")
     parser.add_argument("--mode", type=str, choices=["ast_cfg", "ast", "cfg"], default="ast_cfg",
                         help="Mode of analysis. Options: 'ast_cfg', 'ast', 'cfg'. Default: 'cfg'.")

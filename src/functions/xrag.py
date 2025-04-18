@@ -111,7 +111,7 @@ def process_input_contract_worker(args: Tuple) -> Optional[str]:
             response = llm_processor.analyze_contract(source_code, similar_contexts)
 
             # Parse LLM response safely
-            response_data = json.loads(response.text) if isinstance(response.text, str) else response
+            response_data = json.loads(response)
 
             classification = response_data.get("classification", "unknown")
             explanation = response_data.get("explanation", "No explanation provided.")
