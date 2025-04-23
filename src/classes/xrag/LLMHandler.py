@@ -2,6 +2,7 @@ import os
 import time
 from typing import List, Optional, Any
 
+from llama_index.core import PromptHelper
 from llama_index.core.llms import LLM
 from llama_index.llms.gemini import Gemini
 from llama_index.llms.openai import OpenAI
@@ -22,7 +23,7 @@ class LLMHandler:
 
         # Initialize a single LLM instance
         # LlamaIndex's LLM interface is unified, use it for both structured and unstructured calls
-        if model_name in ['gemini-2.0-flash-lite', 'gemini-1.5-flash']:
+        if model_name in ['gemini-2.0-flash', 'gemini-1.5-flash']:
             # Ensure you have GOOGLE_API_KEY set in your environment
             self.llm: LLM = Gemini(model_name=f"models/{model_name}", temperature=0.0)
         elif model_name in ['gpt-4o', 'gpt-4o-mini', 'o3-mini']:

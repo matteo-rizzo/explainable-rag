@@ -169,7 +169,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset-path", type=str, default="dataset/manually-verified",
                         help="Base path for the dataset.")
     parser.add_argument("--model-name", type=str, required=True, help="OpenAI or Google model name.",
-                        choices=['gpt-4o', 'o3-mini', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'])
+                        choices=['gpt-4o', 'o3-mini', 'gemini-2.0-flash', 'gemini-1.5-flash'])
     parser.add_argument("--missing-files-dir", type=str, default="",
                         help="Path to a directory to check missing files against")
     args = parser.parse_args()

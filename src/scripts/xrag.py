@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--mode", type=str, choices=["ast_cfg", "ast", "cfg"], default="ast_cfg",
                         help="Mode of analysis. Options: 'ast_cfg', 'ast', 'cfg'. Default: 'cfg'.")
     parser.add_argument("--model-name", type=str, help="OpenAI or Google model name.",
-                        choices=['gpt-4o', 'o3-mini', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'])
+                        choices=['gpt-4o', 'o3-mini', 'gemini-2.0-flash', 'gemini-1.5-flash'])
     parser.add_argument("--use-multiprocessing", action="store_true",
                         help="Enable multiprocessing for contract analysis.")
     args = parser.parse_args()
