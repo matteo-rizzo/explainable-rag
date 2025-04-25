@@ -26,7 +26,7 @@ export PYTHONPATH=$(pwd)/src:$PYTHONPATH
 MODES=("ast_cfg" "ast" "cfg")
 
 # OpenAI Model Names (modify these as needed)
-MODELS=("gpt-4o" "o3-mini")
+MODELS=("gemini-1.5-flash")
 
 # Dataset path template
 DATASET_PATH="cv_splits/cv_split_3/{}"
@@ -43,8 +43,7 @@ for MODEL in "${MODELS[@]}"; do
         python3 "$PYTHON_SCRIPT" \
             --dataset-path "$DATASET_PATH" \
             --mode "$MODE" \
-            --model-name "$MODEL" \
-            --use-multiprocessing
+            --model-name "$MODEL"
 
         echo "[INFO] Finished processing mode: $MODE with model: $MODEL."
         echo "------------------------------------------------------"
