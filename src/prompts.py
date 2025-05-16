@@ -25,16 +25,17 @@ ANALYZE_CONTRACT_NO_CONTEXT_TMPL = PromptTemplate(ANALYZE_CONTRACT_NO_CONTEXT_TM
 # For analyze_contract WITH context
 ANALYZE_CONTRACT_WITH_CONTEXT_TMPL_STR = """
 You are a highly experienced blockchain security expert. Your goal is to classify the following input contract
-based on its source code and the analysis of similar contracts provided.
+based on its source code and the provided similar contracts with groundtruth attached.
 
-Input Contract:
+Input Contract Source Code:
 ```solidity
 {contract_source}
+--------------------------------------------------------
 Security Analysis of Similar Contracts:
 {similar_contexts_str}
 
 Task:
-Classify the Contract: Determine whether the input contract is 'Safe' or 'Reentrant' based primarily on its code, using the similar contract analysis for context and pattern identification. Be precise: the classification must be either 'Reentrant' or 'Safe'.
+Classify the Contract: Determine whether the input contract is 'Safe' or 'Reentrant' based primarily on its code, using the labelled similar contract for context and pattern identification. Be precise: the classification must be either 'Reentrant' or 'Safe'.
 Explain the Classification: Provide a structured and extensive explanation, referencing specific lines/functions in the input contract and potentially drawing parallels or contrasts with patterns identified in the similar contracts. Ensure your explanation is valid JSON string content (e.g., escape necessary characters like quotes).
 Respond with a well-structured security assessment and a clear decision in the requested format.
 """

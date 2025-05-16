@@ -23,10 +23,10 @@ source "$VENV_PATH/bin/activate"
 export PYTHONPATH=$(pwd)/src:$PYTHONPATH
 
 # OpenAI Model Names (modify these as needed)
-MODELS=("gemini-2.0-flash")
+MODELS=("gpt-4o" "o3-mini")
 
 # Dataset path template
-DATASET_PATH="cv_splits/cv_split_1/test"
+DATASET_PATH="cv_splits/cv_split_3/test"
 
 # Loop through each OpenAI model
 for MODEL in "${MODELS[@]}"; do

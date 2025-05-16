@@ -2,7 +2,6 @@ import os
 import time
 from typing import List, Optional, Any
 
-from llama_index.core import PromptHelper
 from llama_index.core.llms import LLM
 from llama_index.llms.gemini import Gemini
 from llama_index.llms.openai import OpenAI
@@ -153,7 +152,7 @@ class LLMHandler:
                 formatted_prompt  # Pass the formatted prompt string
             )
             # .complete returns a CompletionResponse object, get the text
-            return response.text if response else None
+            return response.text + "\n\n --- source code: \n\n" + similar_source_code if response else None
         except Exception as e:
             self.logger.error(f"Failed to analyze similar contract after retries: {e}")
             return None

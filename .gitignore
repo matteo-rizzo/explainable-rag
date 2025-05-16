@@ -175,3 +175,4 @@ cython_debug/
 /notebooks/misclassified/
 /notebooks/questionnaire/
 /notebooks/logs/
+/study_data/

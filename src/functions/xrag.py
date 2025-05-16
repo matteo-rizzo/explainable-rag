@@ -87,7 +87,7 @@ def process_input_contract_worker(args: Tuple) -> Optional[str]:
                 analysis_response = llm_processor.analyze_similar_contract(similar_source_code, similar_label)
 
                 similar_contexts.append(
-                    f"### {similar_id} - Label {similar_label}\n#### Analysis:\n{analysis_response}\n\n"
+                    f"### {similar_id} - Label {similar_label}\n#### Contract Code:\n{analysis_response}\n\n"
                 )
 
                 logger.debug(f"Analyzed similar contract {similar_id} (Label: {similar_label}).")
