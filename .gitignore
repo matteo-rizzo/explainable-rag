@@ -176,3 +176,5 @@ cython_debug/
 /notebooks/questionnaire/
 /notebooks/logs/
 /study_data/
+/cv_splits/
+/cv_splits_handcrafted/
