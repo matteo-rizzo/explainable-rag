@@ -23,13 +23,13 @@ source "$VENV_PATH/bin/activate"
 export PYTHONPATH=$(pwd)/src:$PYTHONPATH
 
 # Modes to run
-MODES=("cfg")
+MODES=("ast" "cfg" "ast_cfg")
 
 # OpenAI Model Names (modify these as needed)
 MODELS=("gpt-4o" "o3-mini")
 
 # Dataset path template
-DATASET_PATH="cv_splits_handcrafted/cv_split_2/{}"
+DATASET_PATH="cv_splits/cv_split_1/{}"
 
 # Loop through each OpenAI model
 for MODEL in "${MODELS[@]}"; do
@@ -43,8 +43,7 @@ for MODEL in "${MODELS[@]}"; do
         python3 "$PYTHON_SCRIPT" \
             --dataset-path "$DATASET_PATH" \
             --mode "$MODE" \
-            --model-name "$MODEL" \
-            --use-multiprocessing
+            --model-name "$MODEL"
 
         echo "[INFO] Finished processing mode: $MODE with model: $MODEL."
         echo "------------------------------------------------------"
